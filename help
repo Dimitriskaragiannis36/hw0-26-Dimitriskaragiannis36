@@ -1,0 +1,10 @@
+============================ΓΙΑ ΣΤΗΣΙΜΟ=================================
+sudo apt update
+sudo apt install docker.io -y
+
+sudo systemctl start docker
+
+sudo systemctl status docker
+
+============================ΓΙΑ ΤΡΕΞΙΜΟ=================================
+docker run --rm --privileged -it ethan42/iwconfig:vulnerable /bin/bash
