@@ -10,9 +10,10 @@ sudo systemctl status docker
 docker run --rm --privileged -it ethan42/iwconfig:vulnerable /bin/bash
 ψάχνω κώδικα:  less -N iwconfig.c ή (cat)
 ψάχνω για char buffer[:  grep -n 'char.*\[' iwconfig.c  -> 216 (δεν βοήθησε)
+ψάχνω για main: grep -n main  iwconfig.c -> 
 ψάχνω για argv:  grep -n argv iwconfig.c   ifname -> print_info
 ψάχνω για print_info:  grep -n print_info iwconfig.c -> get_info, display_info
-ψάχνω για get_info:  q ->    
+ψάχνω για get_info: grep -n get_info iwconfig.c  ->    
      68       struct ifreq ifr;
      69 
      70       strcpy(ifr.ifr_name, ifname);
