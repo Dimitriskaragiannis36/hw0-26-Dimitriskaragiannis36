@@ -18,7 +18,6 @@ docker run --rm --privileged -it ethan42/iwconfig:vulnerable /bin/bash
      69 
      70       strcpy(ifr.ifr_name, ifname);
 ψάχνω για struct ifreq:  grep -n "struct ifreq" /usr/include/net/if.h 
-q
 less -N if.h ->
     126 struct ifreq
     127   {
