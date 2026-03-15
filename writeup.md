@@ -24,37 +24,37 @@
 
 Ειδικότερα, για να μπορέσουμε να κάνουμε control-flow-hijack μέσω buffer-overflow θα πρέπει να βρούμε ευπάθεια στο 
 σύστημα και συγκεκριμένα σε buffer. Στην δική μας άσκηση, στο iwconfig.c έπρεπε αφού συνδεθούμε μέσω docker 
-(docker run --rm --privileged -it ethan42/iwconfig:vulnerable /bin/bash) να ψάξουμε το αρχείο (less -N iwconfig.c ή cat)
-για τυχόν buffer (grep -n 'char.*\[' iwconfig.c). Το αρχείο προφανώς είναι τεράστιο και η αναζήτηση buffer δεν βοήθησε. 
+(`docker run --rm --privileged -it ethan42/iwconfig:vulnerable /bin/bash`) να ψάξουμε το αρχείο (`less -N iwconfig.c ή cat`)
+για τυχόν buffer (`grep -n 'char.*\[' iwconfig.c`). Το αρχείο προφανώς είναι τεράστιο και η αναζήτηση buffer δεν βοήθησε. 
 Από την εκφώνηση γίνεται κατανοητό πως το αρχείο iwconfig.c εκτελείται με όρισμα από την γραμμή εντολών. Έστω και αυτό 
-να μην γινόταν αντιληπτό, θα δούμε από την main (grep -n main  iwconfig.c) στην γραμμή 1364 και κάτω (less -N iwconfig.c), 
-πως υπάρχει όρισμα (int argc, char ** argv).
-Επομένως, ψάχνουμε για το όρισμα argv (grep -n argv iwconfig.c) και βλέπουμε πως χρησιμοποιείται από την print_info συνάρτηση 
-(argv[1]). Στην συνέχεια, αναζητούμε την print_info (grep -n print_info iwconfig.c) και βλέπουμε από την γραμμή 541 
-(less -N iwconfig.c) και κάτω πως το argv[1] χρησιμοποιείται ως ifname. Ύστερα, βλέπουμε πως το ifname χρησιμοποιείται 
-από τις get_info και display_info. Αναζητώντας πρώτα την get_info (grep -n get_info iwconfig.c) οδηγούμαστε στην γραμμή 
-55 και κάτω όπου θα συνεχίσουμε να ιχνηλατούμε (less -N iwconfig.c) και σε περίπτωση που δεν καταλήξουμε κάπου, θα 
+να μην γινόταν αντιληπτό, θα δούμε από την main (`grep -n main  iwconfig.c`) στην γραμμή 1364 και κάτω (`less -N iwconfig.c`), 
+πως υπάρχει όρισμα (`int argc, char ** argv`).
+Επομένως, ψάχνουμε για το όρισμα argv (`grep -n argv iwconfig.c`) και βλέπουμε πως χρησιμοποιείται από την print_info συνάρτηση 
+(`argv[1]`). Στην συνέχεια, αναζητούμε την print_info (`grep -n print_info iwconfig.c`) και βλέπουμε από την γραμμή 541 
+(`less -N iwconfig.c`) και κάτω πως το argv[1] χρησιμοποιείται ως ifname. Ύστερα, βλέπουμε πως το ifname χρησιμοποιείται 
+από τις get_info και display_info. Αναζητώντας πρώτα την get_info (`grep -n get_info iwconfig.c`) οδηγούμαστε στην γραμμή 
+55 και κάτω όπου θα συνεχίσουμε να ιχνηλατούμε (`less -N iwconfig.c`) και σε περίπτωση που δεν καταλήξουμε κάπου, θα 
 αναζητήσουμε την display_info. Στην γραμμή 68 βλέπουμε πως χρησιμοποιείται η δομή ifreq (SYSPRO) και το ifr.ifr_name 
-(strcpy(ifr.ifr_name, ifname);). Στο πλαίσιο αυτό βλέπουμε πως η string_copy αντιγράφει μια συμβολοσειρά χωρίς όριο 
-(πιθανό overflow). Αναζητούμε την δομή ifreq (grep -n "struct ifreq" /usr/include/net/if.h) και βρίσκουμε (less -N if.h ) 
+(`strcpy(ifr.ifr_name, ifname);`). Στο πλαίσιο αυτό βλέπουμε πως η string_copy αντιγράφει μια συμβολοσειρά χωρίς όριο 
+(πιθανό overflow). Αναζητούμε την δομή ifreq (`grep -n "struct ifreq" /usr/include/net/if.h`) και βρίσκουμε (`less -N if.h`) 
 στην γραμμή 126 και συγκεκριμένα στην γραμμή 132 πως χρησιμοποιείται το char ifrn_name[IFNAMSIZ]. Υποθέτουμε πως βρήκαμε 
 τον buffer μας, αλλά εμείς ψάχναμε για ifr.ifr_name, ifname. Στην γραμμή 151 γίνεται ξεκάθαρη η αλλαγή σε ifrn_name 
-(# define ifr_name     ifr_ifrn.ifrn_name). Από την γραμμή 129 (# define IFNAMSIZ   IF_NAMESIZE) το μέγεθος του buffer 
-ξέρουμε πως πλέον είναι IF_NAMESIZE και από την 31 βλέπουμε πως αυτό είναι 16 bytes (#define IF_NAMESIZE     16). Άρα, 
+(`# define ifr_name     ifr_ifrn.ifrn_name`). Από την γραμμή 129 (`# define IFNAMSIZ   IF_NAMESIZE`) το μέγεθος του buffer 
+ξέρουμε πως πλέον είναι IF_NAMESIZE και από την 31 βλέπουμε πως αυτό είναι 16 bytes (`#define IF_NAMESIZE     16`). Άρα, 
 έχουμε buffer[16] και γνωρίζουμε πως από την γραμμή εντολών αρκεί να δώσουμε κάτι αρκετά μεγαλύτερο από 16 bytes προκειμένου 
 να φτάσουμε στο return addr. 
-Από εδώ και πέρα ξεκινά το buffer_overflow. Πρώτα θα βρούμε το μονοπάτι του binary αρχείου (which iwconfig) και στην συνέχεια θα 
-καλέσουμε τον GNU Debugger (gdb /usr/sbin/iwconfig). Σε αυτό το περιβάλλον θα δοκιμάσουμε μέσω python script να γεμίσουμε τον 
-buffer π.χ. με Α ώστε να φτάσουμε μέχρι την return addr. Η πρώτη δοκιμή έγινε με 100 Α (run $(perl -e 'print "A"x100')) και το 
-σύστημα μας πέταξε segmentation fault. Κοιτάζοντας τους καταχωρητές (info registers) είδαμε EIP (extended instruction pointer) ίσο 
+Από εδώ και πέρα ξεκινά το buffer_overflow. Πρώτα θα βρούμε το μονοπάτι του binary αρχείου (`which iwconfig`) και στην συνέχεια θα 
+καλέσουμε τον GNU Debugger (`gdb /usr/sbin/iwconfig`). Σε αυτό το περιβάλλον θα δοκιμάσουμε μέσω python script να γεμίσουμε τον 
+buffer π.χ. με Α ώστε να φτάσουμε μέχρι την return addr. Η πρώτη δοκιμή έγινε με 100 Α (`run $(perl -e 'print "A"x100')`) και το 
+σύστημα μας πέταξε segmentation fault. Κοιτάζοντας τους καταχωρητές (`info registers`) είδαμε EIP (extended instruction pointer) ίσο 
 με 0x41414141 που το 41 είναι στην ουσία το Α σε ASCII. Συνεπώς πήραμε τον έλεγχο του EIP που κοιτάζει στην return addr. To
 segmentation fault ήταν αναμενόμενο καθώς η θέση μνήμης 0x41414141 συνήθως ανήκει είτε στο λειτουργικό, είτε απαγορεύεται να 
 την προσπελάσουμε, είτε δεν είναι εκτελέσιμη. Τώρα θα κινηθούμε προσεγγιστηκά και θα δοκιμάσουμε και με 90, 80, όπου θα παρατηρήσουμε 
-πως δεν άλλαξε ο EIP. Στα 70 όμως ο EIP δεν είναι 0x41414141 αλλά έχει πραγματική θέση μνήμης (0x804a61c). Με αυτόν τον τρόπο 
+πως δεν άλλαξε ο EIP. Στα 70 όμως ο EIP δεν είναι 0x41414141 αλλά έχει πραγματική θέση μνήμης (`0x804a61c`). Με αυτόν τον τρόπο 
 καταλαβαίνουμε πως θα χρειαστούμε από 70-80 bytes για να φτάσουμε λίγο πριν το return addr. Με τις επόμενες δοκιμές 79, 77 
 καταλαβαίνουμε πως τα Α δεν εμφανίζονται και στις 4 θέσεις. Ειδικά το 77 εμφανίζει ένα μόνο Α (δηλαδή 41). Έτσι το όριο είναι το 76. 
 Στην παρούσα φάση έχουμε πάρει τον έλεγχο του EIP και άρα βρισκόμαστε όπως δηλώνει και το stack frame πιο πάνω, λίγο πριν την return 
-addr (payload += b'A' * 76). Tώρα θέλουμε να δούμε ποια διεύθυνση θα βάλουμε στο return addr προκειμένου να εκτελεστεί το shellcode 
+addr (`payload += b'A' * 76`). Tώρα θέλουμε να δούμε ποια διεύθυνση θα βάλουμε στο return addr προκειμένου να εκτελεστεί το shellcode 
 μας. Γνωρίζουμε πως το shellcode θα αποθηκευτεί κάπου κοντά στο return addr (δηλαδή στο ESP - extended stack pointer) οπότε θα χρειαστεί 
 να δούμε και το ESP. Το ESP παρουσιάζει για 77 Α (για να βλέπουμε το 41) τιμή 0xffffd170 και θα ελέγξουμε την περιοχή μνήμης γύρω από 
 το 0xffffd170 και προς τα πάνω.
